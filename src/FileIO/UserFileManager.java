@@ -1,5 +1,6 @@
 package FileIO;
 
+import Model.Account;
 import Model.Banker;
 import Model.Customer;
 import Model.Person;
@@ -14,9 +15,10 @@ import java.util.stream.Stream;
 
 public class UserFileManager {
 
-    //creating data folder and customers/banjer file to save data
+    //creating data folders and files to save data
     private static final String CUSTOMER_DIRECTORY = "data/customers";
     private static final String BANKER_DIRECTORY = "data/bankers";
+    private static final String ACCOUNT_DIRECTORY = "data/accounts";
 
     // method to create a customer and update existing customer details
     public static void saveCustomer(Customer customer) throws IOException {
@@ -181,5 +183,84 @@ public class UserFileManager {
         }
     }
 
+    //method to auto generate customer id
+    public static int generateCustomerId() throws IOException{
+        Path directoryPath = Paths.get(CUSTOMER_DIRECTORY);
+
+        //if customer folder exists, start id's with 1001
+        if(!Files.exists((directoryPath))){
+            return 1001;
+        }
+
+        int highestId = 1000;
+
+        try(Stream<Path> files = Files.list(directoryPath)){
+            for(Path file : files.toList()){
+                String fileName = file.getFileName().toString();
+
+                if(fileName.startsWith("Customer-") && file.endsWith(".txt")){
+                    String withoutExtension = fileName.replace(".txt", "");
+                    String[] parts = withoutExtension.split("-");
+                    int id= Integer.parseInt(parts[parts.length - 1]);
+                    if(id > highestId){
+                        highestId = id;
+                    }
+
+                }
+            }
+        }
+        return highestId + 1;
+    }
+
+    //method to auto generate account id
+    public static int generateAccountId() throws IOException{
+        Path directoryPath = Paths.get(ACCOUNT_DIRECTORY);
+
+        if(!Files.exists(directoryPath)){
+            return 1001;
+        }
+
+        int highestId = 1000;
+
+        try(Stream<Path> files = Files.list(directoryPath)){
+            for(Path file : files.toList()){
+                String fileName = file.getFileName().toString();
+
+                if(fileName.startsWith("Account-") && file.endsWith(".txt")){
+                    String withoutExtension = fileName.replace(".txt", "");
+                    String[] parts = withoutExtension.split("-");
+                    int id= Integer.parseInt(parts[parts.length - 1]);
+                    if(id > highestId){
+                        highestId = id;
+                    }
+
+                }
+            }
+        }
+        return highestId + 1;
+    }
+
+    //method to save account
+    public static void saveAccount(Account account) throws IOException{
+
+        //check if folder exist, if not create it
+        Path directoryPath = Paths.get(ACCOUNT_DIRECTORY);
+        Files.createDirectories(directoryPath);
+
+        // Account-<AccountID>.txt
+        String fileName = "Account-" + account.getAccountId() + ".txt";
+
+        Path filePath = directoryPath.resolve(fileName);
+
+        String info = "accountId: " + account.getAccountId() +
+                        "\nbalance: " + account.getBalance() +
+                        "\nownerUsername: " + account.getOwner().getUsername() +
+                        "\nownerId: " + account.getOwner().getId() +
+                        "\nactive: " + account.isActive() +
+                        "\noverdraftCounter: " + account.getOverdraftCounter();
+        Files.writeString(filePath, info);
+
+
+    }
 
 }

@@ -5,18 +5,30 @@ public abstract class Account implements ITransactable{
     private int accountId;
     private double balance;
     private Customer owner;
-    private  int overdraftCounter;
     private boolean active;
+    private  int overdraftCounter;
     private Card card;
 
-    public Account(int accountId, double balance, Customer owner, int overdraftCounter, boolean active, Card card) {
+    //constructor for new account
+    public Account(int accountId, Customer owner) {
         this.accountId = accountId;
-        this.balance = balance;
+        this.balance = 0.0;
         this.owner = owner;
-        this.overdraftCounter = overdraftCounter;
-        this.active = active;
-        this.card = card;
+        this.active = true;
+        this.overdraftCounter = 0;
+        this.card = null;
     }
+
+    //constructor for file loading - existing account
+    protected Account(int accountId, double balance, Customer owner, boolean active, int overdraftCounter, Card card) {
+        this.accountId = accountId;
+        this.balance = 0.0;
+        this.owner = owner;
+        this.active = true;
+        this.overdraftCounter = 0;
+        this.card = null;
+    }
+
 
     public int getAccountId() {
         return accountId;
