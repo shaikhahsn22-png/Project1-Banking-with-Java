@@ -2,57 +2,61 @@ package BankingApp;
 
 import FileIO.UserFileManager;
 import Model.Banker;
+import Model.CheckingAccount;
 import Model.Customer;
+import Model.SavingsAccount;
 
 import java.io.IOException;
 import java.util.Scanner;
 
 public class TestMain {
     public static void main(String[] args) throws IOException {
-        //Banker banker1 = new Banker("Ali", 123,"banker123");
-        //UserFileManager.saveBanker(banker1);
-        Scanner scanner = new Scanner(System.in);
+        Customer customer = new Customer("TestUser", 1001, "1234");
 
-        System.out.println("Enter username: "); //ask for username
-        String username= scanner.nextLine(); //store username
+        CheckingAccount account = new CheckingAccount(2001, customer);
 
-        Banker banker = UserFileManager.findBanker(username);
+        System.out.println("Starting balance: " + account.getBalance());
 
-        if(banker == null){
-            System.out.println("Banker does not exist.");
-            return;
-        }
+        account.deposit(100);
 
-        if(banker.idLocked()){
-            System.out.println("Account is locked, try again later!");
-            return;
-        }
+        System.out.println("Balance after deposit: " + account.getBalance());
 
-        while (!banker.idLocked()){
-            System.out.println("Enter password: ");
-            String password = scanner.nextLine();
+        account.deposit(-50);
 
-            if(banker.checkPassword(password)){
-                banker.resetFailedLoginCounter();
-                System.out.println("You are successfully logged in");
-                break;
-            }
+        System.out.println("Balance after invalid deposit: " + account.getBalance());
 
-            banker.incrementFailedLoginCounter();
-            System.out.println("Incorrect password");
+        System.out.println("Starting balance: " + account.getBalance());
 
-            if(banker.getFailedLoginCounter() >=3){
-                banker.lockAccount();
-                UserFileManager.saveBanker(banker);
-                System.out.println("Account is locked for 1 minute due too many failed attempts.");
-                break;
-            }
+        account.deposit(100);
 
-            // save failed attempt count
-            UserFileManager.saveBanker(banker);
+        account.withdraw(40);
+        System.out.println("Balance after withdrawal: " + account.getBalance());
 
-        }
+        account.withdraw(100);
+        System.out.println("Balance after invalid withdrawal: " + account.getBalance());
 
+
+        Customer customer1 = new Customer("Test1", 1001, "1234");
+        Customer customer2 = new Customer("Test2", 1002, "1234");
+
+        CheckingAccount account1 = new CheckingAccount(2001, customer1);
+        SavingsAccount account2 = new SavingsAccount(2002, customer2);
+
+        account1.deposit(200);
+
+        System.out.println("Before transfer:");
+        System.out.println(account1.getBalance());
+        System.out.println(account2.getBalance());
+
+        account1.transfer(50, account2);
+
+        System.out.println("After transfer:");
+        System.out.println(account1.getBalance());
+        System.out.println(account2.getBalance());
+
+        account.deactivateAccount();
+        account.deposit(100);
+        account.withdraw(50);
     }
 
 }

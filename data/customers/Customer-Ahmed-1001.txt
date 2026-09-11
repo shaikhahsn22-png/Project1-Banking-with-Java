@@ -1,0 +1,5 @@
+username: Ahmed
+id: 1001
+hashedPassword: c5716b88f7e6d3aa4c0f0d1d170604776f9d36481ba3d99c784ef539e6166110
+failedLoginCounter: 0
+lockedUntil: null

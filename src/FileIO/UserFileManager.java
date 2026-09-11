@@ -256,8 +256,7 @@ public class UserFileManager {
                         "\nbalance: " + account.getBalance() +
                         "\nownerUsername: " + account.getOwner().getUsername() +
                         "\nownerId: " + account.getOwner().getId() +
-                        "\nactive: " + account.isActive() +
-                        "\noverdraftCounter: " + account.getOverdraftCounter();
+                        "\nactive: " + account.isActive() ;
         Files.writeString(filePath, info);
 
 

@@ -1,0 +1,5 @@
+username: Ali
+id: 123
+hashedPassword: 63fa63251956349e4500f7b45c95d16ec5d5c29152553376309ae1790f4cf9f2
+failedLoginCounter: 0
+lockedUntil: 2026-09-10T11:01:04.502279200
