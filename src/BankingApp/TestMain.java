@@ -1,62 +1,39 @@
 package BankingApp;
 
 import FileIO.UserFileManager;
-import Model.Banker;
-import Model.CheckingAccount;
-import Model.Customer;
-import Model.SavingsAccount;
+import Model.*;
 
 import java.io.IOException;
 import java.util.Scanner;
 
 public class TestMain {
     public static void main(String[] args) throws IOException {
-        Customer customer = new Customer("TestUser", 1001, "1234");
+        System.out.println(
+                "Next account ID: " + UserFileManager.generateAccountId()
+        );
 
-        CheckingAccount account = new CheckingAccount(2001, customer);
+        Customer shaikha = UserFileManager.findCustomerBasic("Shaikha");
 
-        System.out.println("Starting balance: " + account.getBalance());
+        int shaikhaAccountId = UserFileManager.generateAccountId();
 
-        account.deposit(100);
+        CheckingAccount shaikhaAccount =
+                new CheckingAccount(shaikhaAccountId, shaikha);
 
-        System.out.println("Balance after deposit: " + account.getBalance());
+        shaikha.addAccount(shaikhaAccount);
 
-        account.deposit(-50);
+        UserFileManager.saveAccount(shaikhaAccount);
 
-        System.out.println("Balance after invalid deposit: " + account.getBalance());
+        Customer ahmed = UserFileManager.findCustomerBasic("Ahmed");
 
-        System.out.println("Starting balance: " + account.getBalance());
+        int ahmedAccountId = UserFileManager.generateAccountId();
 
-        account.deposit(100);
+        CheckingAccount ahmedAccount =
+                new CheckingAccount(ahmedAccountId, ahmed);
 
-        account.withdraw(40);
-        System.out.println("Balance after withdrawal: " + account.getBalance());
+        ahmed.addAccount(ahmedAccount);
 
-        account.withdraw(100);
-        System.out.println("Balance after invalid withdrawal: " + account.getBalance());
+        UserFileManager.saveAccount(ahmedAccount);
 
 
-        Customer customer1 = new Customer("Test1", 1001, "1234");
-        Customer customer2 = new Customer("Test2", 1002, "1234");
-
-        CheckingAccount account1 = new CheckingAccount(2001, customer1);
-        SavingsAccount account2 = new SavingsAccount(2002, customer2);
-
-        account1.deposit(200);
-
-        System.out.println("Before transfer:");
-        System.out.println(account1.getBalance());
-        System.out.println(account2.getBalance());
-
-        account1.transfer(50, account2);
-
-        System.out.println("After transfer:");
-        System.out.println(account1.getBalance());
-        System.out.println(account2.getBalance());
-
-        account.deactivateAccount();
-        account.deposit(100);
-        account.withdraw(50);
     }
-
 }

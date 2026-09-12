@@ -20,7 +20,7 @@ public abstract class Account implements ITransactable{
     //constructor for file loading - existing account
     protected Account(int accountId, double balance, Customer owner, boolean active, Card card) {
         this.accountId = accountId;
-        this.balance = 0.0;
+        this.balance = balance;
         this.owner = owner;
         this.active = true;
         this.card = null;

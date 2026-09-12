@@ -1,15 +1,13 @@
 package FileIO;
 
-import Model.Account;
-import Model.Banker;
-import Model.Customer;
-import Model.Person;
+import Model.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -43,20 +41,19 @@ public class UserFileManager {
 
     }
 
-    // method to find customers
-    public static Customer findCustomer(String username) throws IOException {
-
+    //method to find customer (customer profile only)
+    public static Customer findCustomerBasic(String username) throws IOException{
         //to access customers folder
         Path directoryPath = Paths.get(CUSTOMER_DIRECTORY);
 
         //return null if there are no customer files
-       if (!Files.exists(directoryPath)){
-           return null;
-       }
+        if (!Files.exists(directoryPath)){
+            return null;
+        }
 
-       try(Stream<Path> files = Files.list(directoryPath)){
+        try(Stream<Path> files = Files.list(directoryPath)){
 
-           //loop through the files
+            //loop through the files
             for (Path file : files.toList()){
                 //convert the filename to a string
                 String fileName = file.getFileName().toString();
@@ -84,6 +81,7 @@ public class UserFileManager {
                     //recreate customer using the already hashed password
                     Customer customer = new Customer(storedUsername,storedId,storedHashedPassword, true);
 
+                    //restore login state
                     customer.setFailedLoginCounter(storedFailedLoginCounter);
 
                     if(!storedTimer.equals("null")){
@@ -94,9 +92,25 @@ public class UserFileManager {
                 }
 
             }
-       }
+        }
 
         return null;
+    }
+
+    // method to find customers (Account data only)
+    public static Customer findCustomer(String username) throws IOException {
+
+        Customer customer = findCustomerBasic(username);
+        if (customer == null) {
+            return null;
+        }
+        //load customer's account's
+        List<Account> accounts = findAccountsByCustomer(customer);
+        for (Account account : accounts){
+            customer.addAccount(account);
+        }
+
+        return customer;
     }
 
     //method to save a banker details
@@ -216,20 +230,26 @@ public class UserFileManager {
     public static int generateAccountId() throws IOException{
         Path directoryPath = Paths.get(ACCOUNT_DIRECTORY);
 
+
         if(!Files.exists(directoryPath)){
-            return 1001;
+            System.out.println("Account directory does not exist");
+            return 2001;
         }
 
-        int highestId = 1000;
+        int highestId = 2000;
 
         try(Stream<Path> files = Files.list(directoryPath)){
             for(Path file : files.toList()){
                 String fileName = file.getFileName().toString();
+                System.out.println("Found file: " + fileName);
 
-                if(fileName.startsWith("Account-") && file.endsWith(".txt")){
-                    String withoutExtension = fileName.replace(".txt", "");
-                    String[] parts = withoutExtension.split("-");
-                    int id= Integer.parseInt(parts[parts.length - 1]);
+                if(fileName.startsWith("Account-") && fileName.endsWith(".txt")){
+
+                    String idPart = fileName.replace("Account-", "").replace(".txt", "");
+
+                    System.out.println("ID part: " + idPart);
+
+                    int id = Integer.parseInt(idPart);
                     if(id > highestId){
                         highestId = id;
                     }
@@ -237,6 +257,7 @@ public class UserFileManager {
                 }
             }
         }
+        System.out.println("Highest ID: " + highestId);
         return highestId + 1;
     }
 
@@ -251,15 +272,120 @@ public class UserFileManager {
         String fileName = "Account-" + account.getAccountId() + ".txt";
 
         Path filePath = directoryPath.resolve(fileName);
+        String accountType;
 
-        String info = "accountId: " + account.getAccountId() +
+        if(account instanceof CheckingAccount){
+            accountType = "Checking";
+        } else {
+            accountType = "Saving";
+        }
+
+        String info = "accountType: " + accountType +
+                        "\naccountId: " + account.getAccountId() +
                         "\nbalance: " + account.getBalance() +
                         "\nownerUsername: " + account.getOwner().getUsername() +
                         "\nownerId: " + account.getOwner().getId() +
-                        "\nactive: " + account.isActive() ;
+                        "\nactive: " + account.isActive();
+        if (account instanceof CheckingAccount) {
+            info += "\noverdraftCounter: "
+                    + ((CheckingAccount) account).getOverdraftCounter();
+        }
         Files.writeString(filePath, info);
 
 
+    }
+
+    //method to find customer's account
+    public static List<Account> findAccountsByCustomer(Customer customer) throws IOException{
+        //open data/accounts
+        List<Account> accounts = new ArrayList<>();
+        Path directoryPath = Paths.get(ACCOUNT_DIRECTORY);
+
+        //if folder does not exist, return empty list
+        if(!Files.exists(directoryPath)){
+            return accounts;
+        }
+
+        try(Stream<Path> files = Files.list(directoryPath)){
+            //loop through account files
+            for(Path file : files.toList()){
+                //read current account file
+                List<String> lines = Files.readAllLines(file);
+
+                //extract values from each line in the file
+                String accountType= lines.get(0).split(": ",2)[1];
+                int accountId = Integer.parseInt(lines.get(1).split(": ",2)[1]);
+                double balance = Double.parseDouble(lines.get(2).split(": ",2)[1]);
+                int ownerId = Integer.parseInt(lines.get(4).split(": ",2)[1]);
+                boolean active = Boolean.parseBoolean(lines.get(5).split(": ",2)[1]);
+
+                //load only if accounts belongs to this customer
+                if(ownerId == customer.getId()){
+                    Account account;
+
+                    //recreate matching account
+                    if(accountType.equals("Checking")){
+                        int overdraftCounter = Integer.parseInt(lines.get(6).split(": ",2)[1]);
+
+                        account = new CheckingAccount(accountId, balance, customer, overdraftCounter, active, null);
+                    } else {
+                        account = new SavingsAccount(accountId, balance, customer, active, null);
+                    }
+
+                    //add to list
+                    accounts.add(account);
+
+                }
+
+            }
+            //return accounts list
+            return accounts;
+        }
+
+
+    }
+
+    //method to find customer's account by id
+    public static Account findAccountById(int accountId) throws IOException{
+
+        //open data/accounts
+        Path directoryPath = Paths.get(ACCOUNT_DIRECTORY);
+
+        if (!Files.exists(directoryPath)) {
+            return null;
+        }
+
+        //find Account-<id>.txt
+        Path filePath = directoryPath.resolve("Account-" + accountId + ".txt");
+
+        if (!Files.exists(filePath)) {
+            return null;
+        }
+
+        //read its data
+        List<String> lines = Files.readAllLines(filePath);
+
+        String accountType = lines.get(0).split(": ", 2)[1];
+        int storedAccountId = Integer.parseInt(lines.get(1).split(": ", 2)[1]);
+        double balance = Double.parseDouble(lines.get(2).split(": ", 2)[1]);
+        String ownerUsername = lines.get(3).split(": ", 2)[1];
+        int ownerId = Integer.parseInt(lines.get(4).split(": ", 2)[1]);
+        boolean active = Boolean.parseBoolean(lines.get(5).split(": ", 2)[1]);
+
+        // find  owner so the account has its Customer object
+        Customer owner = findCustomerBasic(ownerUsername);
+
+        if (owner == null) {
+            return null;
+        }
+        //recreate Checking/SavingsAccount
+        //return it
+        if (accountType.equals("Checking")) {
+            int overdraftCounter = Integer.parseInt(lines.get(6).split(": ", 2)[1]);
+            return new CheckingAccount(storedAccountId, balance, owner, overdraftCounter, active, null);
+        }
+
+        return new SavingsAccount(storedAccountId,balance, owner, active, null);
     }
 
 }

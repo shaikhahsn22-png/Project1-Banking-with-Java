@@ -1,0 +1,7 @@
+accountType: Checking
+accountId: 2001
+balance: 350.0
+ownerUsername: Shaikha
+ownerId: 1432
+active: true
+overdraftCounter: 0

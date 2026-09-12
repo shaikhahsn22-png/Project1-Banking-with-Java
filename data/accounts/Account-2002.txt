@@ -1,0 +1,7 @@
+accountType: Checking
+accountId: 2002
+balance: 150.0
+ownerUsername: Ahmed
+ownerId: 1001
+active: true
+overdraftCounter: 0

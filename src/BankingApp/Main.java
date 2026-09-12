@@ -1,9 +1,7 @@
 package BankingApp;
 
 import FileIO.UserFileManager;
-import Model.Banker;
-import Model.Customer;
-import Model.Person;
+import Model.*;
 
 import java.io.IOException;
 import java.util.Scanner;
@@ -52,6 +50,8 @@ public class Main {
                 System.out.println("You are successfully logged in");
                 if (user instanceof Banker) {
                     bankerMenu((Banker) user, scanner);
+                } else if (user instanceof Customer) {
+                    customerMenu((Customer) user, scanner);
                 }
                 break;
             }
@@ -74,7 +74,7 @@ public class Main {
 
     }
 
-    //method to print menu
+    //banker's menu method
     public static void bankerMenu(Banker banker, Scanner scanner) throws IOException{
         boolean running = true;
 
@@ -155,6 +155,131 @@ public class Main {
         System.out.println("\n------ MY ACCOUNT ------");
         System.out.println("Username: " + banker.getUsername());
         System.out.println("Banker ID: " + banker.getId());
+    }
+
+    //customer's menu
+    public static void customerMenu(Customer customer, Scanner scanner) throws IOException{
+        boolean running = true;
+
+        while (running){
+            System.out.println("\n------ Customer Menu ------");
+            System.out.println("1. View Account Details");
+            System.out.println("2. Deposit");
+            System.out.println("3. Withdraw");
+            System.out.println("4. Transfer");
+            System.out.println("5. Logout");
+
+            System.out.println("Choose a service");
+            String choice = scanner.nextLine();
+
+            switch (choice){
+                case "1":
+                    viewAccountDetails(customer);
+                    break;
+                case "2":
+                    deposit(customer,scanner);
+                    break;
+                case "3":
+                    withdraw(customer,scanner);
+                    break;
+                case "4":
+                    transfer(customer,scanner);
+                    break;
+                case "5":
+                    System.out.println("Logged out successfully");
+                    running = false;
+                    break;
+                default:
+                    System.out.println("Invalid option");
+
+            }
+        }
+    }
+
+    public static void viewAccountDetails(Customer customer) throws IOException{
+        //check account
+        if (customer.getAccounts().isEmpty()) {
+            System.out.println("No accounts found.");
+            return;
+        }
+
+        System.out.println("\n---- ACCOUNT DETAILS ----");
+
+        for (Account account : customer.getAccounts()){
+            System.out.println("Account ID: " + account.getAccountId());
+            System.out.println("Account Type: " + account.getClass().getSimpleName());
+            System.out.println("Balance: " + account.getBalance());
+            System.out.println("Status: " + (account.isActive()? "Active" : "Inactive"));
+            System.out.println("--------------------");
+        }
+
+    }
+
+    public static void deposit(Customer customer, Scanner scanner) throws IOException{
+        //check account
+        if (customer.getAccounts().isEmpty()) {
+            System.out.println("No accounts found.");
+            return;
+        }
+
+        //use customer's first account
+        Account account = customer.getAccounts().get(0);
+
+        System.out.println("Enter deposit amount: ");
+        double amount = Double.parseDouble(scanner.nextLine());
+
+        account.deposit(amount);
+
+        UserFileManager.saveAccount(account);
+        System.out.println("Current balance: " + account.getBalance());
+    }
+
+    public static void withdraw(Customer customer, Scanner scanner) throws IOException{
+        //check account
+        if (customer.getAccounts().isEmpty()) {
+            System.out.println("No accounts found.");
+            return;
+        }
+
+        //use customer's first account
+        Account account = customer.getAccounts().get(0);
+
+        System.out.println("Enter withdraw amount: ");
+        double amount = Double.parseDouble(scanner.nextLine());
+
+        account.withdraw(amount);
+
+        UserFileManager.saveAccount(account);
+        System.out.println("Current balance: " + account.getBalance());
+    }
+
+    public static void transfer(Customer customer, Scanner scanner) throws IOException{
+        //check account
+        if (customer.getAccounts().isEmpty()) {
+            System.out.println("No accounts found.");
+            return;
+        }
+
+        //use customer's first account
+        Account sourceAccount = customer.getAccounts().get(0);
+
+        System.out.println("Enter destination account ID: ");
+        int destinationAccountId = Integer.parseInt(scanner.nextLine());
+
+        Account destinationAccount = UserFileManager.findAccountById(destinationAccountId);
+         if(destinationAccount == null){
+             System.out.println("Destination account does not exist");
+             return;
+         }
+
+        System.out.println("Enter transfer amount: ");
+        double amount = Double.parseDouble(scanner.nextLine());
+        sourceAccount.transfer(amount, destinationAccount);
+
+        UserFileManager.saveAccount(sourceAccount);
+        UserFileManager.saveAccount(destinationAccount);
+
+        System.out.println("Current balance: " + sourceAccount.getBalance());
     }
 }
 
