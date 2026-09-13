@@ -1,0 +1,6 @@
+accountType: Saving
+accountId: 2003
+balance: 170.0
+ownerUsername: Shaikha
+ownerId: 1432
+active: true

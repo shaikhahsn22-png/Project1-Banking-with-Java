@@ -4,6 +4,8 @@ import FileIO.UserFileManager;
 import Model.*;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Scanner;
 
 import static FileIO.UserFileManager.findCustomer;
@@ -164,10 +166,12 @@ public class Main {
         while (running){
             System.out.println("\n------ Customer Menu ------");
             System.out.println("1. View Account Details");
-            System.out.println("2. Deposit");
-            System.out.println("3. Withdraw");
-            System.out.println("4. Transfer");
-            System.out.println("5. Logout");
+            System.out.println("2. Create Account");
+            System.out.println("3. Deposit");
+            System.out.println("4. Withdraw");
+            System.out.println("5. Transfer");
+            System.out.println("6. View Transaction History");
+            System.out.println("7. Logout");
 
             System.out.println("Choose a service");
             String choice = scanner.nextLine();
@@ -177,15 +181,21 @@ public class Main {
                     viewAccountDetails(customer);
                     break;
                 case "2":
-                    deposit(customer,scanner);
+                    createAccount(customer, scanner);
                     break;
                 case "3":
-                    withdraw(customer,scanner);
+                    deposit(customer,scanner);
                     break;
                 case "4":
-                    transfer(customer,scanner);
+                    withdraw(customer,scanner);
                     break;
                 case "5":
+                    transfer(customer,scanner);
+                    break;
+                case "6":
+                    viewTransactionHistory(customer, scanner);
+                    break;
+                case "7":
                     System.out.println("Logged out successfully");
                     running = false;
                     break;
@@ -216,22 +226,76 @@ public class Main {
     }
 
     public static void deposit(Customer customer, Scanner scanner) throws IOException{
-        //check account
-        if (customer.getAccounts().isEmpty()) {
-            System.out.println("No accounts found.");
+        System.out.println("Deposit to: ");
+        System.out.println("1. My Account");
+        System.out.println("2. Another Account");
+
+        String choice = scanner.nextLine();
+        Account account;
+        boolean ownAccount = false;
+
+        if(choice.equals("1")){
+            ownAccount = true;
+            //check account
+            if (customer.getAccounts().isEmpty()) {
+                System.out.println("You don't have any accounts");
+                return;
+            }
+
+            //if customer has only one account
+            if(customer.getAccounts().size() == 1){
+                account = customer.getAccounts().get(0);
+            } else {//if has more than one account
+
+                System.out.println("Choose an account: ");
+                for (int i =0; i < customer.getAccounts().size(); i++){
+                    Account currentAccount = customer.getAccounts().get(i);
+
+                    System.out.println((i + 1) + ". " + currentAccount.getClass().getSimpleName() + " - " + currentAccount.getAccountId());
+                }
+
+                int accountChoice = Integer.parseInt(scanner.nextLine());
+
+                if(accountChoice < 1 || accountChoice > customer.getAccounts().size()){
+                    System.out.println("Invalid account choice");
+                    return;
+                }
+                account = customer.getAccounts().get(accountChoice -1);
+            }
+
+        } else if(choice.equals("2")){
+            System.out.println("Enter account ID to deposit into: ");
+            int destinationAccountId = Integer.parseInt(scanner.nextLine());
+            account = UserFileManager.findAccountById(destinationAccountId);
+            if(account == null){
+                System.out.println("Account does not exist");
+                return;
+            }
+        }else {
+            System.out.println("Invalid choice");
             return;
         }
-
-        //use customer's first account
-        Account account = customer.getAccounts().get(0);
 
         System.out.println("Enter deposit amount: ");
         double amount = Double.parseDouble(scanner.nextLine());
 
         account.deposit(amount);
-
         UserFileManager.saveAccount(account);
-        System.out.println("Current balance: " + account.getBalance());
+
+        //transaction
+        //generate transaction ID
+        int transactionId = UserFileManager.generateTransactionId();
+        //create DEPOSIT transaction
+        Transaction transaction = new Transaction(transactionId, LocalDateTime.now(), TransactionType.DEPOSIT,amount,account.getBalance(),null,account);
+        //save transaction file
+        UserFileManager.saveTransaction(transaction);
+
+        if (ownAccount) {
+            System.out.println("Current balance: " + account.getBalance());
+        } else {
+            System.out.println("Deposit successful to account " + account.getAccountId());
+        }
+
     }
 
     public static void withdraw(Customer customer, Scanner scanner) throws IOException{
@@ -247,10 +311,25 @@ public class Main {
         System.out.println("Enter withdraw amount: ");
         double amount = Double.parseDouble(scanner.nextLine());
 
+        double balanceBefore = account.getBalance();
         account.withdraw(amount);
+
+        //if balance did not change, withdrawal failed
+        if (account.getBalance() == balanceBefore) {
+            return;
+        }
 
         UserFileManager.saveAccount(account);
         System.out.println("Current balance: " + account.getBalance());
+
+        //transaction
+        //generate transaction ID
+        int transactionId = UserFileManager.generateTransactionId();
+        //create WITHDRAW transaction
+        Transaction transaction = new Transaction(transactionId, LocalDateTime.now(), TransactionType.WITHDRAW,amount,account.getBalance(),account,null);
+        //save transaction file
+        UserFileManager.saveTransaction(transaction);
+
     }
 
     public static void transfer(Customer customer, Scanner scanner) throws IOException{
@@ -272,14 +351,126 @@ public class Main {
              return;
          }
 
+        double balanceBefore = sourceAccount.getBalance();
+
         System.out.println("Enter transfer amount: ");
         double amount = Double.parseDouble(scanner.nextLine());
         sourceAccount.transfer(amount, destinationAccount);
 
+        // if source balance did not change, transfer failed
+        if (sourceAccount.getBalance() == balanceBefore) {
+            return;
+        }
+
+        //save both accounts
         UserFileManager.saveAccount(sourceAccount);
         UserFileManager.saveAccount(destinationAccount);
 
+        //transaction
+        //generate transaction ID
+        int transactionId = UserFileManager.generateTransactionId();
+        //create DEPOSIT transaction
+        Transaction transaction = new Transaction(transactionId, LocalDateTime.now(), TransactionType.TRANSFER,amount,sourceAccount.getBalance(),sourceAccount,destinationAccount);
+        //save transaction file
+        UserFileManager.saveTransaction(transaction);
+
         System.out.println("Current balance: " + sourceAccount.getBalance());
     }
+
+    public static void createAccount(Customer customer, Scanner scanner) throws IOException{
+
+        System.out.println("Choose Account Type: ");
+        System.out.println("1. Checking Account");
+        System.out.println("2. Saving Account");
+
+        String choice = scanner.nextLine();
+
+        if(choice.equals("1")){
+            // check if customer already has a checking account
+            if (customer.hasCheckingAccount()){
+                System.out.println("You already have a checking account");
+                return;
+            }
+
+            int accountId = UserFileManager.generateAccountId();
+            CheckingAccount checkingAccount = new CheckingAccount(accountId, customer);
+            customer.addAccount(checkingAccount);
+            UserFileManager.saveAccount(checkingAccount);
+
+            System.out.println("Checking account created successfully.");
+            System.out.println("Account ID: " +accountId);
+
+        } else if (choice.equals("2")){
+            // check if customer already has a saving account
+            if (customer.hasSavingAccount()){
+                System.out.println("You already have a checking account");
+                return;
+            }
+
+            int accountId = UserFileManager.generateAccountId();
+            SavingsAccount savingsAccount = new SavingsAccount(accountId, customer);
+            customer.addAccount(savingsAccount);
+            UserFileManager.saveAccount(savingsAccount);
+
+            System.out.println("Saving account created successfully.");
+            System.out.println("Account ID: " +accountId);
+
+        } else {
+            System.out.println("Invalid account type.");
+        }
+
+    }
+
+    public static void viewTransactionHistory(Customer customer, Scanner scanner) throws IOException{
+        if (customer.getAccounts().isEmpty()) {
+            System.out.println("No accounts found.");
+            return;
+        }
+
+        Account account;
+        // if customer has only one account
+        if (customer.getAccounts().size() == 1) {
+            account = customer.getAccounts().get(0);
+        } else {
+
+            System.out.println("Choose account:");
+
+            for (int i = 0; i < customer.getAccounts().size(); i++) {
+
+                Account currentAccount = customer.getAccounts().get(i);
+
+                System.out.println(
+                        (i + 1) + ". "
+                                + currentAccount.getClass().getSimpleName()
+                                + " - "
+                                + currentAccount.getAccountId()
+                );
+            }
+
+            int choice = Integer.parseInt(scanner.nextLine());
+
+            account = customer.getAccounts().get(choice - 1);
+        }
+
+        List<Transaction> transactions = UserFileManager.findTransactionsByAccount(account.getAccountId());
+
+        if (transactions.isEmpty()) {
+            System.out.println("No transactions found");
+            return;
+        }
+
+        System.out.println("\n---- Transaction History ----");
+
+        for (Transaction transaction : transactions) {
+
+            System.out.println("ID: " + transaction.getTransactionId()
+                            + " \nType: " + transaction.getType()
+                            + " \nAmount: " + transaction.getAmount()
+                            + " \nDate: " + transaction.getDateTime()
+                            + " \nBalance After: " + transaction.getBalanceAfter());
+            System.out.println("-------------");
+        }
+    }
+
 }
 

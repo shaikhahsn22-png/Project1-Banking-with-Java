@@ -9,6 +9,7 @@ public class Transaction {
     private TransactionType type;
     private double amount;
     private double balanceAfter;
+
     private Account sender;
     private Account recipient;
 

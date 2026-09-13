@@ -27,4 +27,23 @@ public class Customer extends Person {
         accounts.add(account);
     }
 
+    //method to check if customer has checking account
+    public boolean hasCheckingAccount() {
+        for (Account account : accounts) {
+            if (account instanceof CheckingAccount) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    //method to check if customer has saving account
+    public boolean hasSavingAccount(){
+        for (Account account : accounts){
+            if(account instanceof SavingsAccount){
+                return true;
+            }
+        }
+        return false;
+    }
 }

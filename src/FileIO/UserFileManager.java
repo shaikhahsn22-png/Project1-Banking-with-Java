@@ -17,6 +17,7 @@ public class UserFileManager {
     private static final String CUSTOMER_DIRECTORY = "data/customers";
     private static final String BANKER_DIRECTORY = "data/bankers";
     private static final String ACCOUNT_DIRECTORY = "data/accounts";
+    private static final String TRANSACTION_DIRECTORY = "data/transaction";
 
     // method to create a customer and update existing customer details
     public static void saveCustomer(Customer customer) throws IOException {
@@ -201,7 +202,7 @@ public class UserFileManager {
     public static int generateCustomerId() throws IOException{
         Path directoryPath = Paths.get(CUSTOMER_DIRECTORY);
 
-        //if customer folder exists, start id's with 1001
+        //if there is no customer folder exists, start id's with 1001
         if(!Files.exists((directoryPath))){
             return 1001;
         }
@@ -230,9 +231,7 @@ public class UserFileManager {
     public static int generateAccountId() throws IOException{
         Path directoryPath = Paths.get(ACCOUNT_DIRECTORY);
 
-
         if(!Files.exists(directoryPath)){
-            System.out.println("Account directory does not exist");
             return 2001;
         }
 
@@ -241,13 +240,10 @@ public class UserFileManager {
         try(Stream<Path> files = Files.list(directoryPath)){
             for(Path file : files.toList()){
                 String fileName = file.getFileName().toString();
-                System.out.println("Found file: " + fileName);
 
                 if(fileName.startsWith("Account-") && fileName.endsWith(".txt")){
 
                     String idPart = fileName.replace("Account-", "").replace(".txt", "");
-
-                    System.out.println("ID part: " + idPart);
 
                     int id = Integer.parseInt(idPart);
                     if(id > highestId){
@@ -257,7 +253,6 @@ public class UserFileManager {
                 }
             }
         }
-        System.out.println("Highest ID: " + highestId);
         return highestId + 1;
     }
 
@@ -387,5 +382,145 @@ public class UserFileManager {
 
         return new SavingsAccount(storedAccountId,balance, owner, active, null);
     }
+
+    //method to auto generate transaction id
+    public static int generateTransactionId() throws IOException{
+        Path directoryPath = Paths.get(TRANSACTION_DIRECTORY);
+
+        //if there is no transactions yet, start id's with 3001
+        if(!Files.exists((directoryPath))){
+            return 3001;
+        }
+
+        int highestId = 3000;
+
+        try(Stream<Path> files = Files.list(directoryPath)){
+            for (Path file : files.toList()){
+                //get the file name
+                String fileName = file.getFileName().toString();
+
+                //check the transaction file
+                if (fileName.startsWith("Transaction-") && fileName.endsWith(".txt")){
+                    //to remove everything except the number
+                    String idPart = fileName.replace("Transaction-", "").replace(".txt","");
+
+                    int id = Integer.parseInt(idPart);
+
+                    //to keep track of the largest ID found
+                    if(id > highestId){
+                        highestId = id;
+                    }
+                }
+            }
+        }
+        return highestId + 1;
+    }
+
+    //method to save transactions
+    public static void saveTransaction(Transaction transaction) throws IOException{
+        Path directoryPath = Paths.get(TRANSACTION_DIRECTORY);
+
+        //check if folder exist, if not create it
+        Files.createDirectories(directoryPath);
+        String fileName = "Transaction-" + transaction.getTransactionId() + ".txt";
+        Path filePath = directoryPath.resolve(fileName);
+
+        String senderId = "null";
+        String recipientId = "null";
+
+        if(transaction.getSender() != null){
+            senderId = String.valueOf(transaction.getSender().getAccountId());
+        }
+
+        if(transaction.getRecipient() != null){
+            recipientId = String.valueOf(transaction.getRecipient().getAccountId());
+        }
+
+        String info = "transactionId: " + transaction.getTransactionId() +
+                "\ndateTime: " + transaction.getDateTime() +
+                "\ntype: " + transaction.getType() +
+                "\namount: "+ transaction.getAmount() +
+                "\nbalanceAfter: " + transaction.getBalanceAfter()+
+                "\nsenderAccountId: " + senderId +
+                "\nrecipientAccountId: " + recipientId;
+        Files.writeString(filePath, info);
+
+    }
+
+    //method to find customer's transactions by account id
+    public static List<Transaction> findTransactionsByAccount(int accountId) throws IOException{
+        List<Transaction> transactions = new ArrayList<>();
+
+        //open data/transactions
+        Path directoryPath = Paths.get(TRANSACTION_DIRECTORY);
+
+        if (!Files.exists(directoryPath)) {
+            return transactions;
+        }
+
+        //→ loop through transaction files
+        try (Stream<Path> files = Files.list(directoryPath)) {
+
+            for (Path file : files.toList()) {
+                //method only tries to parse transaction files
+                String fileName = file.getFileName().toString();
+
+                if (!fileName.startsWith("Transaction-") || !fileName.endsWith(".txt")) {
+                    continue;
+                }
+
+                List<String> lines = Files.readAllLines(file);
+
+                //extract the saved values from each transaction file
+                int storedTransactionId = Integer.parseInt(lines.get(0).split(": ", 2)[1]);
+                LocalDateTime dateTime = LocalDateTime.parse(lines.get(1).split(": ", 2)[1]);
+                TransactionType type = TransactionType.valueOf(lines.get(2).split(": ", 2)[1]);
+                double amount = Double.parseDouble(lines.get(3).split(": ", 2)[1]);
+                double balanceAfter = Double.parseDouble(lines.get(4).split(": ", 2)[1]);
+                String senderIdText = lines.get(5).split(": ", 2)[1];
+                String recipientIdText = lines.get(6).split(": ", 2)[1];
+
+                Integer senderId = null;
+                Integer recipientId = null;
+
+                // becausesender/recipient IDs safely may be null
+                if (!senderIdText.equals("null")) {
+                    senderId = Integer.parseInt(senderIdText);
+                }
+
+                if (!recipientIdText.equals("null")) {
+                    recipientId = Integer.parseInt(recipientIdText);
+                }
+
+                boolean belongsToAccount = (senderId != null && senderId == accountId) || (recipientId != null && recipientId == accountId);
+
+                if (!belongsToAccount) {
+                    continue;
+                }
+
+                //recreate the sender and recipient account objects only when those IDs exist
+                Account sender = null;
+                Account recipient = null;
+
+                if (senderId != null) {
+                    sender = findAccountById(senderId);
+                }
+
+                if (recipientId != null) {
+                    recipient = findAccountById(recipientId);
+                }
+
+                //recreate the Transaction object
+                Transaction transaction = new Transaction(storedTransactionId, dateTime, type, amount, balanceAfter, sender, recipient);
+
+                //add it to the list
+                transactions.add(transaction);
+            }
+        }
+        //return all matching transactions
+        return transactions;
+    }
+
+
 
 }

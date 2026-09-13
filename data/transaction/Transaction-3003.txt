@@ -1,0 +1,7 @@
+transactionId: 3003
+dateTime: 2026-09-13T14:39:19.528405200
+type: TRANSFER
+amount: 100.0
+balanceAfter: 200.0
+senderAccountId: 2002
+recipientAccountId: 2001
