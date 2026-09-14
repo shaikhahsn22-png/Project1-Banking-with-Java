@@ -213,7 +213,7 @@ public class UserFileManager {
             for(Path file : files.toList()){
                 String fileName = file.getFileName().toString();
 
-                if(fileName.startsWith("Customer-") && file.endsWith(".txt")){
+                if(fileName.startsWith("Customer-") && fileName.endsWith(".txt")){
                     String withoutExtension = fileName.replace(".txt", "");
                     String[] parts = withoutExtension.split("-");
                     int id= Integer.parseInt(parts[parts.length - 1]);

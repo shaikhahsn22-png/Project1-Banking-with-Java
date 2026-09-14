@@ -324,6 +324,13 @@ public class Main {
         double amount = Double.parseDouble(scanner.nextLine());
 
         double balanceBefore = account.getBalance();
+        int overdraftCounterBefore = 0;
+
+        if (account instanceof CheckingAccount) {
+            overdraftCounterBefore =
+                    ((CheckingAccount) account).getOverdraftCounter();
+        }
+
         account.withdraw(amount);
 
         //if balance did not change, withdrawal failed
@@ -341,6 +348,15 @@ public class Main {
         Transaction transaction = new Transaction(transactionId, LocalDateTime.now(), TransactionType.WITHDRAW,amount,account.getBalance(),account,null);
         //save transaction file
         UserFileManager.saveTransaction(transaction);
+
+        if (account instanceof CheckingAccount checkingAccount) {
+            if (checkingAccount.getOverdraftCounter() > overdraftCounterBefore) {
+                //if overdraft happens
+                    int feeTransactionId= UserFileManager.generateTransactionId();
+                    Transaction feeTransaction = new Transaction(feeTransactionId, LocalDateTime.now(), TransactionType.OVERDRAFT_FEE,35.0,account.getBalance(),account,null);
+                    UserFileManager.saveTransaction(feeTransaction);
+            }
+        }
 
     }
 
@@ -504,37 +520,34 @@ public class Main {
         System.out.println("6. Last 30 Days");
         System.out.println("7. Last Month");
 
-        System.out.print("Choose filter: ");
+        System.out.print("Choose Filter: ");
         int choice = Integer.parseInt(scanner.nextLine());
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(); //get today's date
 
         switch (choice) {
-
             case 1:
                 return transactions;
 
             case 2:
-                //today
+                //today's filter
                 return transactions.stream().filter(t -> t.getDateTime()
                                 .toLocalDate().equals(today)).toList();
 
             case 3:
-                //yesterday
+                //yesterday's filter
                 LocalDate yesterday = today.minusDays(1);
-
                 return transactions.stream().filter(t -> t.getDateTime()
                                 .toLocalDate().equals(yesterday)).toList();
 
             case 4:
-                //last 7 days
+                //last 7 days filter
                 LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
-
                 return transactions.stream().filter(t -> !t.getDateTime()
                                 .isBefore(sevenDaysAgo)).toList();
 
             case 5:
                 //last week
-                LocalDate startOfThisWeek = today.with(DayOfWeek.MONDAY);
+                LocalDate startOfThisWeek = today.with(DayOfWeek.SUNDAY);
                 LocalDate startOfLastWeek = startOfThisWeek.minusWeeks(1);
                 LocalDate endOfLastWeek = startOfThisWeek.minusDays(1);
 
@@ -555,7 +568,6 @@ public class Main {
 
                 return transactions.stream().filter(t -> {
                             LocalDate date = t.getDateTime().toLocalDate();
-
                             return !date.isBefore(firstDayOfLastMonth) && !date.isAfter(lastDayOfLastMonth);}).toList();
 
             default:

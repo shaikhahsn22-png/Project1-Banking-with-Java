@@ -1,6 +1,6 @@
 accountType: Checking
 accountId: 2002
-balance: 200.0
+balance: 300.0
 ownerUsername: Ahmed
 ownerId: 1001
 active: true

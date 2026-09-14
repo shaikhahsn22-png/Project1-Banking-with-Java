@@ -1,0 +1,7 @@
+transactionId: 3012
+dateTime: 2026-09-14T16:05:20.260563100
+type: OVERDRAFT_FEE
+amount: 35.0
+balanceAfter: -45.0
+senderAccountId: 2004
+recipientAccountId: null

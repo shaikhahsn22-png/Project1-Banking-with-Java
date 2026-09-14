@@ -1,0 +1,7 @@
+accountType: Checking
+accountId: 2004
+balance: 10.0
+ownerUsername: Hasan
+ownerId: 1433
+active: true
+overdraftCounter: 0

@@ -1,0 +1,7 @@
+transactionId: 3014
+dateTime: 2026-09-14T16:06:56.175574100
+type: WITHDRAW
+amount: 50.0
+balanceAfter: -50.0
+senderAccountId: 2004
+recipientAccountId: null

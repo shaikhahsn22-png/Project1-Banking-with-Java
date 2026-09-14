@@ -1,0 +1,7 @@
+transactionId: 3005
+dateTime: 2026-09-14T13:22:09.922896800
+type: DEPOSIT
+amount: 100.0
+balanceAfter: 100.0
+senderAccountId: null
+recipientAccountId: 2004

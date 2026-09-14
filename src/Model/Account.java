@@ -20,7 +20,7 @@ public abstract class Account implements ITransactable{
     //constructor for file loading - existing account
     protected Account(int accountId, double balance, Customer owner, boolean active, Card card) {
         this.accountId = accountId;
-        this.balance = balance;
+        this.balance = balance  ;
         this.owner = owner;
         this.active = true;
         this.card = null;
@@ -44,6 +44,11 @@ public abstract class Account implements ITransactable{
 
     public Card getCard() {
         return card;
+    }
+
+    //balance setter to be able to set it in checking account after overdraft
+    protected void setBalance(double balance) {
+        this.balance = balance;
     }
 
     //account status
@@ -75,17 +80,13 @@ public abstract class Account implements ITransactable{
             System.out.println("Insufficient funds");
             return;
         }
+
         balance -=amount;
         System.out.println("Withdraw successful");
     }
 
     @Override
     public void deposit(double amount) {
-        //check if account is active
-        if(!active){
-            System.out.println("Account is inactive");
-            return;
-        }
 
         //check if amount is 0 or less
         if(amount <= 0){

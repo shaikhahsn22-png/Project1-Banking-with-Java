@@ -1,5 +1,5 @@
 package Model;
 
 public enum TransactionType {
-    WITHDRAW, DEPOSIT, TRANSFER
+    WITHDRAW, DEPOSIT, TRANSFER, OVERDRAFT_FEE
 }
