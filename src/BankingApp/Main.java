@@ -4,7 +4,10 @@ import FileIO.UserFileManager;
 import Model.*;
 
 import java.io.IOException;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -24,6 +27,11 @@ public class Main {
 
         if(user == null){
             user = UserFileManager.findBanker(username);
+        }
+
+        if (user == null) {
+            System.out.println("User not found.");
+            return;
         }
 
         //if user is found, then fine the rule of the user
@@ -171,7 +179,8 @@ public class Main {
             System.out.println("4. Withdraw");
             System.out.println("5. Transfer");
             System.out.println("6. View Transaction History");
-            System.out.println("7. Logout");
+            System.out.println("7. Profile Statement");
+            System.out.println("8. Logout");
 
             System.out.println("Choose a service");
             String choice = scanner.nextLine();
@@ -196,6 +205,9 @@ public class Main {
                     viewTransactionHistory(customer, scanner);
                     break;
                 case "7":
+                    generateStatement(customer, scanner);
+                    break;
+                case "8":
                     System.out.println("Logged out successfully");
                     running = false;
                     break;
@@ -459,6 +471,15 @@ public class Main {
             return;
         }
 
+        //show filtering
+        List<Transaction> filteredTransactions = filterTransactions(transactions, scanner);
+
+        if (filteredTransactions.isEmpty()) {
+            System.out.println("No transactions found for this period.");
+            return;
+        }
+
+        //show filtered transaction history
         System.out.println("\n---- Transaction History ----");
 
         for (Transaction transaction : transactions) {
@@ -472,5 +493,137 @@ public class Main {
         }
     }
 
-}
+    //method to filter transactions
+    public static List<Transaction> filterTransactions(List<Transaction> transactions, Scanner scanner) {
+        System.out.println("\n--- Filter Transactions ---");
+        System.out.println("1. All Transactions");
+        System.out.println("2. Today");
+        System.out.println("3. Yesterday");
+        System.out.println("4. Last 7 Days");
+        System.out.println("5. Last Week");
+        System.out.println("6. Last 30 Days");
+        System.out.println("7. Last Month");
+
+        System.out.print("Choose filter: ");
+        int choice = Integer.parseInt(scanner.nextLine());
+        LocalDate today = LocalDate.now();
+
+        switch (choice) {
+
+            case 1:
+                return transactions;
+
+            case 2:
+                //today
+                return transactions.stream().filter(t -> t.getDateTime()
+                                .toLocalDate().equals(today)).toList();
+
+            case 3:
+                //yesterday
+                LocalDate yesterday = today.minusDays(1);
+
+                return transactions.stream().filter(t -> t.getDateTime()
+                                .toLocalDate().equals(yesterday)).toList();
+
+            case 4:
+                //last 7 days
+                LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+
+                return transactions.stream().filter(t -> !t.getDateTime()
+                                .isBefore(sevenDaysAgo)).toList();
+
+            case 5:
+                //last week
+                LocalDate startOfThisWeek = today.with(DayOfWeek.MONDAY);
+                LocalDate startOfLastWeek = startOfThisWeek.minusWeeks(1);
+                LocalDate endOfLastWeek = startOfThisWeek.minusDays(1);
+
+                return transactions.stream().filter(t -> {
+                            LocalDate date = t.getDateTime().toLocalDate();
+                            return !date.isBefore(startOfLastWeek) && !date.isAfter(endOfLastWeek);}).toList();
+
+            case 6:
+                //last 30 days
+                LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+                return transactions.stream().filter(t -> !t.getDateTime().isBefore(thirtyDaysAgo)).toList();
+
+            case 7:
+                //last month
+                LocalDate firstDayOfThisMonth = today.withDayOfMonth(1);
+                LocalDate firstDayOfLastMonth = firstDayOfThisMonth.minusMonths(1);
+                LocalDate lastDayOfLastMonth = firstDayOfThisMonth.minusDays(1);
+
+                return transactions.stream().filter(t -> {
+                            LocalDate date = t.getDateTime().toLocalDate();
+
+                            return !date.isBefore(firstDayOfLastMonth) && !date.isAfter(lastDayOfLastMonth);}).toList();
+
+            default:
+                System.out.println("Invalid filter choice.");
+                return new ArrayList<>();
+        }
+    }
+
+    //method to generate statement
+    public static void generateStatement(Customer customer, Scanner scanner) throws IOException{
+        if (customer.getAccounts().isEmpty()) {
+            System.out.println("No accounts found.");
+            return;
+        }
+
+        Account account = null;
+
+        //choose account
+        if(customer.getAccounts().size() == 1){
+            account = customer.getAccounts().get(0);
+        }else {
+            System.out.println("Choose account:");
+
+            for (int i = 0; i < customer.getAccounts().size(); i++) {
+
+                Account currentAccount = customer.getAccounts().get(i);
+
+                System.out.println((i + 1) + ". "
+                                + currentAccount.getClass().getSimpleName()
+                                + " - "
+                                + currentAccount.getAccountId());
+            }
+        }
+        int choice = Integer.parseInt(scanner.nextLine());
+        account = customer.getAccounts().get(choice - 1);
+
+        if (account == null) {
+            System.out.println("No account selected.");
+            return;
+        }
+
+        //load transactions
+        List<Transaction> transactions = UserFileManager.findTransactionsByAccount(account.getAccountId());
+
+        System.out.println("\n----- ACCOUNT STATEMENT -----");
+        System.out.println("Customer: " + customer.getUsername());
+        System.out.println("Account ID: " + account.getAccountId());
+        System.out.println("Account Type: " + account.getClass().getSimpleName());
+        System.out.println("Current Balance: " + account.getBalance());
+
+        //show filtered transaction history
+        System.out.println("\n---- Transaction History ----");
+        if (transactions.isEmpty()) {
+            System.out.println("No transactions found.");
+        } else {
+            for (Transaction transaction : transactions) {
+
+                System.out.println("ID: " + transaction.getTransactionId()
+                        + " \nType: " + transaction.getType()
+                        + " \nAmount: " + transaction.getAmount()
+                        + " \nDate: " + transaction.getDateTime()
+                        + " \nBalance After: " + transaction.getBalanceAfter());
+                System.out.println("-------------");
+            }
+        }
+
+        }
+
+
+    }
 
